@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>{{TITLE}}1</title>
+<title>{{TITLE}}2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Leaflet -->
@@ -87,11 +87,16 @@ h2 {
 </div>
 
 <script>
-// GPX読み込み
 // ① map を1回だけ作る
 var map = L.map("map").setView([34.6, 135.5], 12);
 
-// ② GPX を map に追加する
+// ② タイルレイヤー（地図画像）を追加 ← これが抜けていた！
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: "© OpenStreetMap contributors"
+}).addTo(map);
+
+// ③ GPX を map に追加する
 new L.GPX("251231_2.gpx", {
   async: true,
   polyline_options: {
@@ -103,6 +108,7 @@ new L.GPX("251231_2.gpx", {
   map.fitBounds(e.target.getBounds());
 }).addTo(map);
 </script>
+
 
 </body>
 </html>
