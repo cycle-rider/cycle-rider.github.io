@@ -88,9 +88,11 @@ h2 {
 
 <script>
 // GPX読み込み
+// ① map を1回だけ作る
 var map = L.map("map").setView([34.6, 135.5], 12);
 
-new L.GPX("./251231_2.gpx", {
+// ② GPX を map に追加する
+new L.GPX("251231_2.gpx", {
   async: true,
   polyline_options: {
     color: "red",
@@ -99,9 +101,7 @@ new L.GPX("./251231_2.gpx", {
   }
 }).on("loaded", function(e) {
   map.fitBounds(e.target.getBounds());
-}).addTo(
-  L.map("map").setView([34.6, 135.5], 12)
-);
+}).addTo(map);
 </script>
 
 </body>
