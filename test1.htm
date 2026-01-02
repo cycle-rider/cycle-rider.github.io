@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>GPX + Elevation Link3</title>
+<title>GPX + Elevation Link4</title>
 <style>
   body { margin: 0; }
   #map { height: 50vh; }
@@ -10,11 +10,11 @@
 </style>
 
 <!-- Leaflet -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <!-- GPX parser -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/2.1.2/gpx.min.js"></script>
+<script src="https://unpkg.com/leaflet-gpx"></script>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -25,31 +25,53 @@
 <canvas id="chart"></canvas>
 
 <script>
-// ------------------------------
+// ------------------------------------------------------
 // 地図の初期化
-// ------------------------------
+// ------------------------------------------------------
 const map = L.map('map');
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 18
 }).addTo(map);
 
-// ------------------------------
+// ------------------------------------------------------
+// Polyline を確実に見つける関数（GPX の構造に依存しない）
+// ------------------------------------------------------
+function findPolyline(layer) {
+  if (layer instanceof L.Polyline) return layer;
+
+  if (layer.getLayers) {
+    for (const l of layer.getLayers()) {
+      const found = findPolyline(l);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// ------------------------------------------------------
 // GPX 読み込み
-// ------------------------------
+// ------------------------------------------------------
 const gpx = new L.GPX("2025-12-31.gpx", {
   async: true,
   marker_options: { startIconUrl: null, endIconUrl: null }
 }).on("loaded", function(e) {
+
+  // ルート全体が見えるように地図を調整
   map.fitBounds(e.target.getBounds());
 
-  // ★ 修正：polyline の latlng を取得
-  const latlngs = e.target.getLayers()[0].getLatLngs();
+  // ★ Polyline を確実に取得
+  const polyline = findPolyline(e.target);
+  const latlngs = polyline.getLatLngs();
+
+  // 高度データ
   const elevations = latlngs.map(p => p.meta.ele);
+
+  // グラフの X 軸ラベル（0,1,2,...）
   const labels = latlngs.map((_, i) => i);
 
-  // ------------------------------
-  // 高度グラフ描画
-  // ------------------------------
+  // ------------------------------------------------------
+  // Chart.js で高度グラフを描画
+  // ------------------------------------------------------
   const ctx = document.getElementById("chart").getContext("2d");
   const chart = new Chart(ctx, {
     type: "line",
@@ -70,16 +92,16 @@ const gpx = new L.GPX("2025-12-31.gpx", {
     }
   });
 
-  // ------------------------------
-  // グラフ → 地図 連動
-  // ------------------------------
+  // ------------------------------------------------------
+  // グラフ → 地図のマウス連動
+  // ------------------------------------------------------
   let marker = null;
 
   document.getElementById("chart").addEventListener("mousemove", function(evt) {
     const points = chart.getElementsAtEventForMode(evt, "index", { intersect: false }, false);
     if (points.length > 0) {
       const idx = points[0].index;
-      const latlng = e.target.get_latlngs()[idx];
+      const latlng = latlngs[idx];
 
       if (!marker) {
         marker = L.circleMarker(latlng, { radius: 6, color: "red" }).addTo(map);
