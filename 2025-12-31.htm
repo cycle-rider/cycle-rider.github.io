@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>{{TITLE}}11</title>
+<title>{{TITLE}}12</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Leaflet -->
@@ -145,73 +145,71 @@ var gpx = new L.GPX("2025-12-31.gpx", {
   document.getElementById("speedcount").innerText = speeds.length;
 })
 
-// ★ addline：trkpt はここで読む（最も安定）
 .on("addline", function(e) {
 
-  try {
-    // trkpt を取得（trk=1, trkseg=1）
-    var pts = e.target._info.gpx.trk[0].trkseg[0].trkpt;
+  // trkpt（ルート座標）
+  var pts = e.target._info.gpx.trk[0].trkseg[0].trkpt;
 
-    // マーカー
-    var hoverMarker = L.circleMarker([0,0], {
-      radius: 6,
-      color: "red",
-      fillColor: "yellow",
-      fillOpacity: 1
-    }).addTo(map);
+  // マーカー
+  var hoverMarker = L.circleMarker([0,0], {
+    radius: 6,
+    color: "red",
+    fillColor: "yellow",
+    fillOpacity: 1
+  }).addTo(map);
 
-    function moveMarkerToPoint(i) {
-      if (i < 0 || i >= pts.length) return;
-      hoverMarker.setLatLng([pts[i].lat, pts[i].lon]);
-    }
-
-    // 標高データ
-    var eleData = e.target.get_elevation_data();
-
-    // グラフ描画（タイミング問題を回避）
-    setTimeout(() => {
-      var ctx = document.getElementById("elevationChart").getContext("2d");
-
-      new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: eleData.map((v, i) => i),
-          datasets: [{
-            label: "標高 (m)",
-            data: eleData,
-            borderColor: "#0078ff",
-            backgroundColor: "rgba(0,120,255,0.2)",
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            x: { display: false },
-            y: { beginAtZero: false }
-          },
-          interaction: {
-            mode: "index",
-            intersect: false
-          },
-          onHover: function(evt, active) {
-            if (active.length > 0) {
-              moveMarkerToPoint(active[0].index);
-            }
-          }
-        }
-      });
-    }, 50);
-
-    // ★ fitBounds は addline の後が最も安定
-    map.fitBounds(e.target.getBounds());
-
-  } catch (err) {
-    console.error("addline error:", err);
+  function moveMarkerToPoint(i) {
+    if (i < 0 || i >= pts.length) return;
+    hoverMarker.setLatLng([pts[i].lat, pts[i].lon]);
   }
 
+  // ★ 標高データは addline の瞬間ではまだ空のことがある
+  // → 次の tick で確実に取得できる
+  setTimeout(() => {
+
+    var eleData = e.target.get_elevation_data();
+    console.log("eleData length:", eleData.length);
+
+    var ctx = document.getElementById("elevationChart").getContext("2d");
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: eleData.map((v, i) => i),
+        datasets: [{
+          label: "標高 (m)",
+          data: eleData,
+          borderColor: "#0078ff",
+          backgroundColor: "rgba(0,120,255,0.2)",
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { display: false },
+          y: { beginAtZero: false }
+        },
+        interaction: {
+          mode: "index",
+          intersect: false
+        },
+        onHover: function(evt, active) {
+          if (active.length > 0) {
+            moveMarkerToPoint(active[0].index);
+          }
+        }
+      }
+    });
+
+    // fitBounds はここで OK
+    map.fitBounds(e.target.getBounds());
+
+  }, 0); // ★ これが最重要
+
+})
 })
 
 .addTo(map);
