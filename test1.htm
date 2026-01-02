@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>GPX + Elevation Link</title>
+<style>
+  body { margin: 0; }
+  #map { height: 50vh; }
+  #chart { height: 50vh; }
+</style>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- GPX parser -->
+<script src="https://unpkg.com/leaflet-gpx"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+<div id="map"></div>
+<canvas id="chart"></canvas>
+
+<script>
+// ------------------------------
+// 地図の初期化
+// ------------------------------
+const map = L.map('map');
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18
+}).addTo(map);
+
+// ------------------------------
+// GPX 読み込み
+// ------------------------------
+const gpx = new L.GPX("sample.gpx", {
+  async: true,
+  marker_options: { startIconUrl: null, endIconUrl: null }
+}).on("loaded", function(e) {
+  map.fitBounds(e.target.getBounds());
+
+  const points = e.target.get_latlngs();
+  const elevations = points.map(p => p.meta.ele);
+  const labels = points.map((_, i) => i);
+
+  // ------------------------------
+  // 高度グラフ描画
+  // ------------------------------
+  const ctx = document.getElementById("chart").getContext("2d");
+  const chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Elevation (m)",
+        data: elevations,
+        borderColor: "blue",
+        borderWidth: 1,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // ------------------------------
+  // グラフ → 地図 連動
+  // ------------------------------
+  let marker = null;
+
+  document.getElementById("chart").addEventListener("mousemove", function(evt) {
+    const points = chart.getElementsAtEventForMode(evt, "index", { intersect: false }, false);
+    if (points.length > 0) {
+      const idx = points[0].index;
+      const latlng = e.target.get_latlngs()[idx];
+
+      if (!marker) {
+        marker = L.circleMarker(latlng, { radius: 6, color: "red" }).addTo(map);
+      } else {
+        marker.setLatLng(latlng);
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>
