@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>{{TITLE}}1</title>
+<title>{{TITLE}}2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Leaflet -->
@@ -27,6 +27,13 @@ header {
   width: 100%;
   height: 350px;
 }
+.section {
+  padding: 20px;
+}
+h2 {
+  border-left: 5px solid #0078ff;
+  padding-left: 10px;
+}
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -37,12 +44,13 @@ header {
   width: 100%;
   border-radius: 6px;
 }
-.section {
-  padding: 20px;
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
 }
-h2 {
-  border-left: 5px solid #0078ff;
-  padding-left: 10px;
+.info-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid #ddd;
 }
 </style>
 </head>
@@ -51,11 +59,32 @@ h2 {
 
 <header>
   <h1>{{TITLE}}</h1>
-  <p>{{DATE}} / 距離：<span id="dist">{{DISTANCE}}</span>km / 
+  <p>{{DATE}} / 距離：<span id="dist">{{DISTANCE}}</span>km /
      獲得標高：<span id="elev">{{ELEVATION}}</span>m</p>
 </header>
 
 <div id="map"></div>
+
+<div class="section">
+  <h2>走行データ（自動取得）</h2>
+  <table class="info-table">
+    <tr><td>総距離</td><td><span id="dist2">-</span> km</td></tr>
+    <tr><td>累積上昇</td><td><span id="gain">-</span> m</td></tr>
+    <tr><td>累積下降</td><td><span id="loss">-</span> m</td></tr>
+    <tr><td>最高標高</td><td><span id="maxele">-</span> m</td></tr>
+    <tr><td>最低標高</td><td><span id="minele">-</span> m</td></tr>
+    <tr><td>開始時刻</td><td><span id="start">-</span></td></tr>
+    <tr><td>終了時刻</td><td><span id="end">-</span></td></tr>
+    <tr><td>総時間</td><td><span id="totaltime">-</span></td></tr>
+    <tr><td>移動時間</td><td><span id="movingtime">-</span></td></tr>
+    <tr><td>平均速度</td><td><span id="avgspeed">-</span> km/h</td></tr>
+    <tr><td>移動平均速度</td><td><span id="movingspeed">-</span> km/h</td></tr>
+    <tr><td>開始地点</td><td><span id="startpt">-</span></td></tr>
+    <tr><td>終了地点</td><td><span id="endpt">-</span></td></tr>
+    <tr><td>標高データ数</td><td><span id="elecount">-</span></td></tr>
+    <tr><td>速度データ数</td><td><span id="speedcount">-</span></td></tr>
+  </table>
+</div>
 
 <div class="section">
   <h2>ルート概要</h2>
@@ -107,13 +136,54 @@ var gpx = new L.GPX("2025-12-31.gpx", {
 .on("loaded", function(e) {
   map.fitBounds(e.target.getBounds());
 
-  // 距離・標高を取得
-  var distance = (e.target.get_distance() / 1000).toFixed(1); // km
-  var elevation = Math.round(e.target.get_elevation_gain());  // m
+  // 基本情報
+  var dist = (e.target.get_distance() / 1000).toFixed(1);
+  var gain = Math.round(e.target.get_elevation_gain());
+  var loss = Math.round(e.target.get_elevation_loss());
+  var maxele = Math.round(e.target.get_elevation_max());
+  var minele = Math.round(e.target.get_elevation_min());
 
-  // HTML に反映（body を書き換えない）
-  document.getElementById("dist").innerText = distance;
-  document.getElementById("elev").innerText = elevation;
+  // 時間系
+  var start = e.target.get_start_time();
+  var end = e.target.get_end_time();
+  var total = e.target.get_total_time();
+  var moving = e.target.get_moving_time();
+
+  // 速度
+  var avgspeed = (e.target.get_average_speed() * 3.6).toFixed(1);
+  var movingspeed = (e.target.get_moving_speed() * 3.6).toFixed(1);
+
+  // 座標
+  var startpt = e.target.get_starting_point();
+  var endpt = e.target.get_end_point();
+
+  // 配列データ
+  var elecount = e.target.get_elevation_data().length;
+  var speedcount = e.target.get_speed_data().length;
+
+  // HTML 反映
+  document.getElementById("dist").innerText = dist;
+  document.getElementById("elev").innerText = gain;
+
+  document.getElementById("dist2").innerText = dist;
+  document.getElementById("gain").innerText = gain;
+  document.getElementById("loss").innerText = loss;
+  document.getElementById("maxele").innerText = maxele;
+  document.getElementById("minele").innerText = minele;
+
+  document.getElementById("start").innerText = start;
+  document.getElementById("end").innerText = end;
+  document.getElementById("totaltime").innerText = (total/3600).toFixed(1) + " h";
+  document.getElementById("movingtime").innerText = (moving/3600).toFixed(1) + " h";
+
+  document.getElementById("avgspeed").innerText = avgspeed;
+  document.getElementById("movingspeed").innerText = movingspeed;
+
+  document.getElementById("startpt").innerText = startpt.lat + ", " + startpt.lng;
+  document.getElementById("endpt").innerText = endpt.lat + ", " + endpt.lng;
+
+  document.getElementById("elecount").innerText = elecount;
+  document.getElementById("speedcount").innerText = speedcount;
 })
 .addTo(map);
 </script>
